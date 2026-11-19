@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>웹앱 접속 통계</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235b4bdb'/%3E%3Crect x='12' y='34' width='9' height='18' rx='2' fill='%23fff'/%3E%3Crect x='27' y='22' width='9' height='30' rx='2' fill='%23fff'/%3E%3Crect x='42' y='12' width='9' height='40' rx='2' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg-1: #0d1230;
+    --bg-2: #1b1342;
+    --card: #1c2542;
+    --card-2: #232e52;
+    --line: #2f3a63;
+    --grid: #2c3658;
+    --text: #eef1fb;
+    --text-2: #b3bcda;
+    --muted: #8590b5;
+    --accent: #6c5ce7;
+    --accent-2: #2a78d6;
+    --danger: #ff8a8a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(1200px 600px at 10% -10%, #2a1f6b 0%, transparent 60%),
+                linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* 상단 바 */
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: linear-gradient(90deg, #5b3fd6, #3a5be0 60%, #2a78d6);
+    box-shadow: 0 4px 20px rgba(0,0,0,.35);
+  }
+  .bar { max-width: 1120px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .logo { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.18); display: grid; place-items: center; flex: none; }
+  .bar h1 { font-size: 18px; margin: 0; font-weight: 800; letter-spacing: -.2px; }
+  .bar .sub { font-size: 12px; color: rgba(255,255,255,.75); margin-top: 1px; }
+  .bar .sp { flex: 1; }
+  .hbtn { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: 7px 12px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .hbtn:hover { background: rgba(255,255,255,.26); }
+
+  /* 바로가기 화면 (상단 바 아래 전체) */
+  .hbtn.on { background: #fff; color: #3a3fd0; border-color: #fff; }
+  #goPage { position: fixed; left: 0; right: 0; bottom: 0; top: var(--hh, 62px); z-index: 9; overflow-y: auto;
+    background: radial-gradient(900px 500px at 85% 0%, #2c2275 0%, transparent 60%), linear-gradient(160deg, #10163a, #1d1548);
+    animation: gpIn .18s ease-out; }
+  @keyframes gpIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+  #goPage .in { max-width: 1120px; margin: 0 auto; padding: 26px 16px 48px; }
+  #goPage h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.3px; }
+  #goPage .lead { margin: 6px 0 20px; color: var(--text-2); font-size: 14px; }
+  .glist { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .gcard { display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: 18px; text-decoration: none; color: var(--text);
+    background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0,0,0,.3); position: relative; overflow: hidden;
+    transition: transform .15s, border-color .15s, box-shadow .15s; }
+  .gcard::after { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, var(--c), transparent 55%); opacity: .13; pointer-events: none; }
+  .gcard:hover, .gcard:focus-visible { transform: translateY(-3px); border-color: var(--c); box-shadow: 0 16px 36px rgba(0,0,0,.45); outline: none; }
+  .gico { width: 62px; height: 62px; border-radius: 17px; flex: none; overflow: hidden; background: var(--c);
+    box-shadow: 0 6px 16px rgba(0,0,0,.4), 0 0 0 2px color-mix(in srgb, var(--c) 60%, transparent); }
+  .gico img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .gtx { min-width: 0; flex: 1; position: relative; }
+  .gtx b { display: block; font-size: 17px; font-weight: 800; }
+  .gtx span { display: block; font-size: 13px; color: var(--text-2); margin-top: 3px; }
+  .gtx small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .garr { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); color: var(--text-2); font-size: 15px; position: relative; }
+  .gcard:hover .garr { background: var(--c); color: #fff; }
+  body.gp-open { overflow: hidden; }
+  .gtabs { display: flex; gap: 8px; margin-bottom: 18px; overflow-x: auto; padding-bottom: 2px; }
+  .gtab { border: 1px solid var(--line); background: #151c3a; color: var(--text-2); border-radius: 12px; padding: 10px 18px; font-size: 15px; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; }
+  .gtab:hover { color: var(--text); border-color: #4a5584; }
+  .gtab.on { background: linear-gradient(90deg, #6c5ce7, #3a5be0); color: #fff; border-color: transparent; box-shadow: 0 6px 18px rgba(80,70,220,.4); }
+  .gtab .cnt { font-size: 12px; background: rgba(255,255,255,.14); border-radius: 999px; padding: 1px 8px; }
+
+  main { max-width: 1120px; margin: 0 auto; padding: 18px 16px 48px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.28); }
+
+  /* 오류 안내 */
+  #errBox { max-width: 420px; margin: 0 auto 16px; padding: 22px; }
+  #errBox h2 { margin: 0 0 6px; font-size: 18px; color: var(--danger); }
+  #errBox p { margin: 0 0 14px; color: var(--text-2); line-height: 1.55; font-size: 14px; word-break: break-all; }
+  .pbtn { width: 100%; padding: 12px; border: 0; border-radius: 10px; background: linear-gradient(90deg, #6c5ce7, #3a5be0); font-weight: 700; font-size: 15px; }
+
+  /* 컨트롤 */
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .seg { display: inline-flex; background: #141b35; border: 1px solid var(--line); border-radius: 11px; padding: 3px; }
+  .seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 13px; font-weight: 600; }
+  .chip .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .chip.off { opacity: .4; }
+  .chip.off .dot { background: transparent !important; outline: 1.5px solid var(--muted); outline-offset: -1.5px; }
+
+  /* 요약 타일 */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .tile { padding: 16px 18px; position: relative; overflow: hidden; }
+  .tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tc, var(--accent)); }
+  .tile .k { font-size: 13px; color: var(--text-2); font-weight: 600; }
+  .tile .v { font-size: 30px; font-weight: 800; margin-top: 4px; letter-spacing: -.5px; }
+  .tile .d { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* 차트 카드 */
+  .panel { padding: 18px; margin-bottom: 16px; }
+  .ph { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .ph h2 { font-size: 16px; margin: 0; }
+  .ph .sp { flex: 1; }
+  .nav { display: inline-flex; align-items: center; gap: 4px; }
+  .nav button { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line); background: var(--card-2); font-size: 15px; }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav .lbl { min-width: 110px; text-align: center; font-weight: 700; }
+  .chart { position: relative; width: 100%; }
+  .chart svg { display: block; width: 100%; overflow: visible; }
+  .chart .axis { fill: var(--muted); font-size: 11px; }
+  .chart .gl { stroke: var(--grid); stroke-width: 1; }
+  .chart .base { stroke: #4a5584; stroke-width: 1; }
+  .chart .hit { fill: transparent; }
+  .chart .col.hl .hit { fill: rgba(255,255,255,.05); }
+  .empty { padding: 40px 10px; text-align: center; color: var(--muted); font-size: 14px; }
+  .tip { position: absolute; pointer-events: none; z-index: 5; background: #0f1530; border: 1px solid #44508a; border-radius: 10px; padding: 9px 11px; font-size: 12.5px; min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,.45); display: none; }
+  .tip .t { font-weight: 700; margin-bottom: 6px; }
+  .tip .r { display: flex; align-items: center; gap: 7px; line-height: 1.7; }
+  .tip .r .dot { width: 9px; height: 9px; border-radius: 2px; }
+  .tip .r .n { margin-left: auto; padding-left: 14px; font-weight: 600; }
+  .tip .sum { border-top: 1px solid var(--line); margin-top: 5px; padding-top: 5px; font-weight: 700; }
+
+  /* 표 */
+  .tw { overflow-x: auto; margin-top: 14px; border-radius: 10px; border: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
+  th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--card); }
+  thead th { background: var(--card-2) !important; color: var(--text-2); font-weight: 700; font-size: 12px; }
+  thead th .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 1px; }
+  tbody tr:hover td { background: #222c4d; }
+  td.z { color: #59648c; }
+  td.tot, th.tot { font-weight: 700; color: var(--text); }
+  tr.we td:first-child { color: #ffb4a8; }
+  details summary { cursor: pointer; color: var(--text-2); font-size: 13px; margin-top: 12px; }
+
+  /* 앱별 */
+  .apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .app { padding: 14px 16px; background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; }
+  .app .top { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .app .top .dot { width: 12px; height: 12px; border-radius: 3px; }
+  .app .top a { margin-left: auto; color: var(--muted); font-size: 12px; text-decoration: none; }
+  .app .top a:hover { color: var(--text); }
+  .app .big { font-size: 24px; font-weight: 800; margin: 6px 0 8px; }
+  .app .big small { font-size: 12px; color: var(--muted); font-weight: 600; margin-left: 4px; }
+  .split { height: 6px; border-radius: 3px; background: #141b35; overflow: hidden; display: flex; gap: 2px; }
+  .split i { display: block; height: 100%; }
+  .app .meta { display: flex; justify-content: space-between; color: var(--text-2); font-size: 12px; margin-top: 6px; }
+  .note { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 18px; }
+  .loading { opacity: .55; transition: opacity .15s; }
+
+  @media (max-width: 860px) {
+    .glist { grid-template-columns: repeat(2, 1fr); }
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    .apps { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 520px) {
+    .bar .sub { display: none; }
+    .bar h1 { font-size: 16px; white-space: nowrap; }
+    .bar { gap: 8px; }
+    .hbtn { padding: 6px 9px; font-size: 12px; }
+    .tile .v { font-size: 24px; }
+    .apps { grid-template-columns: 1fr; }
+    .glist { grid-template-columns: 1fr; gap: 10px; }
+    .gcard { padding: 14px; gap: 13px; }
+    .gico { width: 54px; height: 54px; border-radius: 15px; }
+    #goPage .in { padding-top: 20px; }
+    .panel { padding: 14px; }
+    .nav .lbl { min-width: 92px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 64 64"><rect x="8" y="34" width="11" height="22" rx="3" fill="#fff"/><rect x="26" y="20" width="11" height="36" rx="3" fill="#fff"/><rect x="44" y="8" width="11" height="48" rx="3" fill="#fff"/></svg></div>
+    <div>
+      <h1>웹앱 접속 통계</h1>
+      <div class="sub" id="updated">AIPMP 웹앱 6종 · 한국 시간 기준</div>
+    </div>
+    <div class="sp"></div>
+    <button class="hbtn" id="goBtn" aria-expanded="false" aria-controls="goPage">바로가기</button>
+    <button class="hbtn" id="reload">새로고침</button>
+  </div>
+</header>
+
+<section id="goPage" hidden aria-label="웹앱 바로가기">
+  <div class="in">
+    <h2>웹앱 바로가기</h2>
+    <p class="lead">누르면 새 탭에서 열립니다.</p>
+    <div class="gtabs" id="goTabs" role="tablist"></div>
+    <div class="glist" id="goList" role="tabpanel"></div>
+  </div>
+</section>
+
+<main>
+  <section id="errBox" class="card" hidden>
+    <h2>불러오지 못했습니다</h2>
+    <p id="errMsg"></p>
+    <button class="pbtn" id="retry">다시 시도</button>
+  </section>
+
+  <section id="dash" class="loading">
+    <div class="controls">
+      <div class="seg" id="metricSeg">
+        <button data-v="visits" class="on">접속 수</button>
+        <button data-v="visitors">방문자 수</button>
+      </div>
+      <div class="seg" id="srcSeg">
+        <button data-v="all" class="on">전체</button>
+        <button data-v="web">웹</button>
+        <button data-v="apk">APK</button>
+      </div>
+    </div>
+    <div class="chips" id="chips"></div>
+
+    <div class="tiles">
+      <div class="card tile" style="--tc:#6c5ce7"><div class="k">오늘</div><div class="v num" id="tToday">-</div><div class="d" id="tTodayD"></div></div>
+      <div class="card tile" style="--tc:#2a78d6"><div class="k">어제</div><div class="v num" id="tYest">-</div><div class="d" id="tYestD"></div></div>
+      <div class="card tile" style="--tc:#199e70"><div class="k">이번 달</div><div class="v num" id="tMonth">-</div><div class="d" id="tMonthD"></div></div>
+      <div class="card tile" style="--tc:#c98500"><div class="k">전체 누적</div><div class="v num" id="tTotal">-</div><div class="d" id="tTotalD"></div></div>
+    </div>
+
+    <div class="card panel">
+      <div class="ph">
+        <h2 id="mainTitle">일별 추이</h2>
+        <div class="seg" id="viewSeg">
+          <button data-v="day" class="on">일별</button>
+          <button data-v="month">월별</button>
+        </div>
+        <div class="sp"></div>
+        <div class="nav" id="nav">
+          <button id="prev" aria-label="이전">‹</button>
+          <span class="lbl" id="navLbl"></span>
+          <button id="next" aria-label="다음">›</button>
+        </div>
+      </div>
+      <div class="chart" id="chart"></div>
+      <details id="tableBox">
+        <summary>표로 보기</summary>
+        <div class="tw"><table id="table"></table></div>
+      </details>
+    </div>
+
+    <div class="card panel">
+      <div class="ph"><h2 id="appsTitle">앱별 합계</h2></div>
+      <div class="apps" id="apps"></div>
+      <div class="note">
+        · <b>접속 수</b>: 앱을 열 때마다(새로고침 포함) 1씩 늘어납니다.<br>
+        · <b>방문자 수</b>: 같은 기기·브라우저는 하루에 한 번만 셉니다. 월별 방문자 수는 하루 방문자 수를 더한 값입니다.<br>
+        · <b>APK</b>: 안드로이드 껍데기 앱(WebView)에서 연 경우입니다. 개발 중 로컬 실행은 세지 않습니다.
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var SB_URL = 'https://fderhgftwfsbaumlkxxe.supabase.co';
+  var SB_KEY = 'sb_publishable_CegmHgYuVKWcXKoV54fiKg_ylq3F2xL';
+  try { localStorage.removeItem('vs_key'); } catch (e) {}   // 예전 조회 키 방식의 흔적 정리
+
+  // 앱 목록: 색은 순서 고정(앱마다 색이 바뀌지 않게). 짙은 배경(#1c2542)에서 색약 구분 검증함.
+  var APPS = [
+    { id: 'subswatch',   name: '구독관리',       color: '#3987e5', repo: 'subswatch', cat: 'life',   desc: '정기 구독·결제 관리' },
+    { id: 'squadrush',   name: '부대 돌격',      color: '#d95926', repo: 'squadrush', cat: 'game',   desc: '부대를 이끄는 돌격 게임' },
+    { id: 'familygame',  name: '패밀리 게임',    color: '#199e70', repo: 'familygame', cat: 'game',  desc: '가족과 함께 하는 게임' },
+    { id: 'easysplit',   name: '모임 정산기',    color: '#c98500', repo: 'easysplit', cat: 'life',   desc: '모임 비용 나눠 내기' },
+    { id: 'pickmachine', name: '뽑기 머신',      color: '#d55181', repo: 'pickmachine', cat: 'life', desc: '랜덤 추첨·뽑기' },
+    { id: 'pawvillage',  name: '동물 마을 퍼즐', color: '#9085e9', repo: 'pawvillage', cat: 'game',  desc: '귀여운 동물 퍼즐 게임' },
+    { id: 'dungeoncardrush', name: '던전 카드 러시', color: '#3f6fd8', repo: 'dungeoncardrush', cat: 'game', desc: '카드로 강해지는 던전 생존 액션' }
+  ];
+  // 바로가기 화면의 탭(분류). 새 분류가 생기면 여기에 추가하고 앱에 cat 을 맞춘다.
+  var CATS = [
+    { id: 'game', name: '게임', icon: '🎮' },
+    { id: 'life', name: '생활', icon: '🏠' }
+  ];
+  var APP_BY_ID = {}; APPS.forEach(function (a) { APP_BY_ID[a.id] = a; });
+  var WD = ['일', '월', '화', '수', '목', '금', '토'];
+
+  var state = {
+    metric: 'visits',
+    src: 'all',
+    view: 'day',
+    hidden: {},          // 숨긴 앱
+    month: null,         // 일별 보기의 달 'YYYY-MM'
+    year: null,          // 월별 보기의 해
+    monthly: [],         // visit_monthly 결과
+    days: {},            // 'YYYY-MM' → visit_stats 결과
+    recent: []           // 어제~오늘
+  };
+
+  // ── 날짜 (한국 시간) ─────────────────────────────────────────────
+  function kstNow() { return new Date(Date.now() + 9 * 3600e3); }
+  function ymd(d) { return d.toISOString().slice(0, 10); }
+  function todayStr() { return ymd(kstNow()); }
+  function addDays(s, n) { var d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return ymd(d); }
+  function monthOf(s) { return s.slice(0, 7); }
+  function addMonths(m, n) { var y = +m.slice(0, 4), mo = +m.slice(5, 7) - 1 + n; y += Math.floor(mo / 12); mo = ((mo % 12) + 12) % 12; return y + '-' + String(mo + 1).padStart(2, '0'); }
+  function daysIn(m) { var y = +m.slice(0, 4), mo = +m.slice(5, 7); return new Date(Date.UTC(y, mo, 0)).getUTCDate(); }
+  function wd(s) { return new Date(s + 'T00:00:00Z').getUTCDay(); }
+  function fmt(n) { return (n || 0).toLocaleString('ko-KR'); }
+
+  // ── 저장소 ──────────────────────────────────────────────────────
+  function loadPrefs() {
+    try {
+      var p = JSON.parse(localStorage.getItem('vs_prefs') || '{}');
+      if (p.metric) state.metric = p.metric;
+      if (p.src) state.src = p.src;
+      if (p.view) state.view = p.view;
+      if (p.hidden) state.hidden = p.hidden;
+    } catch (e) {}
+  }
+  function savePrefs() {
+    try { localStorage.setItem('vs_prefs', JSON.stringify({ metric: state.metric, src: state.src, view: state.view, hidden: state.hidden })); } catch (e) {}
+  }
+
+  // ── 서버 호출 ───────────────────────────────────────────────────
+  // ?demo : 서버 없이 가짜 데이터로 화면 확인용
+  var DEMO = /[?&]demo\b/.test(location.search);
+  var demoRows = null;
+  function demoData() {
+    if (demoRows) return demoRows;
+    demoRows = [];
+    var t = todayStr(), seed = 7;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    var base = [30, 18, 12, 9, 22, 15];
+    for (var i = 400; i >= 0; i--) {
+      var d = addDays(t, -i), w = wd(d), boost = (w === 0 || w === 6) ? 1.5 : 1;
+      APPS.forEach(function (a, k) {
+        if (k === 5 && i > 60) return;   // 동물 마을 퍼즐은 최근에 나온 것으로
+        ['web', 'apk'].forEach(function (s) {
+          var v = Math.round(base[k] * boost * (s === 'apk' ? 0.35 : 1) * (0.5 + rnd()) * (1 + (400 - i) / 500));
+          if (v > 0) demoRows.push({ app: a.id, day: d, src: s, visits: v, visitors: Math.max(1, Math.round(v * 0.6)) });
+        });
+      });
+    }
+    return demoRows;
+  }
+  function demoRpc(fn, body) {
+    var rows = demoData();
+    if (fn === 'visit_stats') return rows.filter(function (r) { return r.day >= body.p_from && r.day <= body.p_to; });
+    var m = {};
+    rows.forEach(function (r) {
+      var k = r.app + '|' + r.day.slice(0, 7) + '|' + r.src;
+      m[k] = m[k] || { app: r.app, month: r.day.slice(0, 7) + '-01', src: r.src, visits: 0, visitors: 0 };
+      m[k].visits += r.visits; m[k].visitors += r.visitors;
+    });
+    return Object.keys(m).sort(function (a, b) { return m[a].month < m[b].month ? -1 : 1; }).map(function (k) { return m[k]; });
+  }
+
+  function rpc(fn, body) {
+    if (DEMO) return Promise.resolve(demoRpc(fn, body));
+    return fetch(SB_URL + '/rest/v1/rpc/' + fn, {
+      method: 'POST',
+      headers: { apikey: SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        var j = null; try { j = JSON.parse(t); } catch (e) {}
+        if (!r.ok) {
+          throw new Error((j && j.message) || t || ('HTTP ' + r.status));
+        }
+        return j || [];
+      });
+    });
+  }
+  function loadMonth(m) {
+    if (state.days[m]) return Promise.resolve(state.days[m]);
+    return rpc('visit_stats', { p_from: m + '-01', p_to: m + '-' + String(daysIn(m)).padStart(2, '0') })
+      .then(function (rows) { state.days[m] = rows; return rows; });
+  }
+  function loadAll() {
+    var t = todayStr();
+    state.days = {};
+    return Promise.all([
+      rpc('visit_monthly', {}),
+      rpc('visit_stats', { p_from: addDays(t, -1), p_to: t })
+    ]).then(function (res) {
+      state.monthly = res[0];
+      state.recent = res[1];
+      return loadMonth(state.month);
+    });
+  }
+
+  // ── 집계 도우미 ─────────────────────────────────────────────────
+  function pass(row) { return !state.hidden[row.app] && APP_BY_ID[row.app] && (state.src === 'all' || row.src === state.src); }
+  function val(row) { return +row[state.metric] || 0; }
+  function sumRows(rows, filter) {
+    var s = 0; rows.forEach(function (r) { if (pass(r) && (!filter || filter(r))) s += val(r); }); return s;
+  }
+  // key(row) → { app → 값 }
+  function pivot(rows, keyFn) {
+    var out = {};
+    rows.forEach(function (r) {
+      if (!pass(r)) return;
+      var k = keyFn(r); out[k] = out[k] || {};
+      out[k][r.app] = (out[k][r.app] || 0) + val(r);
+    });
+    return out;
+  }
+  function visibleApps() { return APPS.filter(function (a) { return !state.hidden[a.id]; }); }
+
+  // ── 화면 ────────────────────────────────────────────────────────
+  var $ = function (id) { return document.getElementById(id); };
+
+  function showError(msg) {
+    $('errMsg').textContent = msg;
+    $('errBox').hidden = false;
+  }
+
+  function renderChips() {
+    var el = $('chips'); el.innerHTML = '';
+    APPS.forEach(function (a) {
+      var b = document.createElement('button');
+      b.className = 'chip' + (state.hidden[a.id] ? ' off' : '');
+      b.innerHTML = '<span class="dot" style="background:' + a.color + '"></span>' + a.name;
+      b.title = state.hidden[a.id] ? '눌러서 보이기' : '눌러서 숨기기';
+      b.onclick = function () {
+        if (state.hidden[a.id]) delete state.hidden[a.id];
+        else if (visibleApps().length > 1) state.hidden[a.id] = true;
+        savePrefs(); renderAll();
+      };
+      el.appendChild(b);
+    });
+  }
+  function setSeg(id, v) {
+    Array.prototype.forEach.call($(id).children, function (b) { b.classList.toggle('on', b.dataset.v === v); });
+  }
+
+  function renderTiles() {
+    var t = todayStr(), y = addDays(t, -1), m = monthOf(t);
+    var label = state.metric === 'visits' ? '접속' : '방문자';
+    var vt = sumRows(state.recent, function (r) { return r.day === t; });
+    var vy = sumRows(state.recent, function (r) { return r.day === y; });
+    var vm = sumRows(state.monthly, function (r) { return r.month.slice(0, 7) === m; });
+    var vp = sumRows(state.monthly, function (r) { return r.month.slice(0, 7) === addMonths(m, -1); });
+    var va = sumRows(state.monthly);
+    $('tToday').textContent = fmt(vt);
+    $('tYest').textContent = fmt(vy);
+    $('tMonth').textContent = fmt(vm);
+    $('tTotal').textContent = fmt(va);
+    $('tTodayD').textContent = (+t.slice(5, 7)) + '월 ' + (+t.slice(8)) + '일 (' + WD[wd(t)] + ') ' + label;
+    $('tYestD').textContent = vy ? ('오늘은 어제의 ' + Math.round(vt / vy * 100) + '%') : (+y.slice(5, 7)) + '월 ' + (+y.slice(8)) + '일';
+    $('tMonthD').textContent = '지난달 ' + fmt(vp);
+    var known = state.monthly.filter(function (r) { return APP_BY_ID[r.app]; });
+    var first = known.length ? known[0].month.slice(0, 7) : null;
+    $('tTotalD').textContent = first ? (first.slice(0, 4) + '년 ' + (+first.slice(5)) + '월부터') : '아직 기록 없음';
+  }
+
+  // 월별 보기: 데이터가 있는 해 범위
+  function yearRange() {
+    var t = +todayStr().slice(0, 4), lo = t;
+    state.monthly.forEach(function (r) { if (APP_BY_ID[r.app]) lo = Math.min(lo, +r.month.slice(0, 4)); });
+    return [lo, t];
+  }
+  function monthRangeLo() {
+    var lo = monthOf(todayStr());
+    state.monthly.forEach(function (r) { var m = r.month.slice(0, 7); if (APP_BY_ID[r.app] && m < lo) lo = m; });
+    return lo;
+  }
+
+  function renderMain() {
+    var cols, title, navLbl, canPrev, canNext, unitLabel;
+    var t = todayStr();
+    if (state.view === 'day') {
+      var m = state.month, rows = state.days[m] || [];
+      var pv = pivot(rows, function (r) { return r.day; });
+      var n = daysIn(m);
+      cols = [];
+      for (var d = 1; d <= n; d++) {
+        var ds = m + '-' + String(d).padStart(2, '0');
+        cols.push({ key: ds, label: String(d), tip: (+m.slice(5)) + '월 ' + d + '일 (' + WD[wd(ds)] + ')', vals: pv[ds] || {}, future: ds > t, we: wd(ds) === 0 || wd(ds) === 6 });
+      }
+      title = '일별 추이';
+      navLbl = m.slice(0, 4) + '년 ' + (+m.slice(5)) + '월';
+      canPrev = m > monthRangeLo(); canNext = m < monthOf(t);
+      unitLabel = '날짜';
+    } else {
+      var yr = state.year;
+      var pm = pivot(state.monthly, function (r) { return r.month.slice(0, 7); });
+      cols = [];
+      for (var mo = 1; mo <= 12; mo++) {
+        var ms = yr + '-' + String(mo).padStart(2, '0');
+        cols.push({ key: ms, label: mo + '월', tip: yr + '년 ' + mo + '월', vals: pm[ms] || {}, future: ms > monthOf(t) });
+      }
+      var rg = yearRange();
+      title = '월별 추이';
+      navLbl = yr + '년';
+      canPrev = yr > rg[0]; canNext = yr < rg[1];
+      unitLabel = '월';
+    }
+    $('mainTitle').textContent = title;
+    $('navLbl').textContent = navLbl;
+    $('prev').disabled = !canPrev; $('next').disabled = !canNext;
+    drawChart(cols);
+    drawTable(cols, unitLabel);
+    renderApps(cols);
+  }
+
+  // ── 쌓인 막대 차트 (SVG) ────────────────────────────────────────
+  function niceMax(v) {
+    if (v <= 4) return 4;
+    var p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p;
+    var nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+    return nf * p;
+  }
+  function drawChart(cols) {
+    var box = $('chart');
+    var apps = visibleApps();
+    var W = Math.max(280, box.clientWidth || 600);
+    var H = W < 520 ? 220 : 280;
+    var padL = 40, padR = 6, padT = 10, padB = 26;
+    var iw = W - padL - padR, ih = H - padT - padB;
+    var totals = cols.map(function (c) { var s = 0; apps.forEach(function (a) { s += c.vals[a.id] || 0; }); return s; });
+    var maxV = Math.max.apply(null, totals.concat([0]));
+    if (maxV === 0) {
+      box.innerHTML = '<div class="empty">이 기간에는 아직 기록이 없습니다.<br>웹앱을 열면 여기에 쌓입니다.</div>';
+      return;
+    }
+    var top = niceMax(maxV);
+    var step = iw / cols.length;
+    var bw = Math.max(3, Math.min(34, step * 0.62));
+    var y = function (v) { return padT + ih - v / top * ih; };
+    var svg = ['<svg viewBox="0 0 ' + W + ' ' + H + '" height="' + H + '" role="img" aria-label="쌓인 막대 차트">'];
+    svg.push('<defs>');
+    cols.forEach(function (c, i) {
+      var x = padL + step * i + (step - bw) / 2, h = ih * totals[i] / top;
+      if (h > 0) svg.push('<clipPath id="cp' + i + '"><rect x="' + x + '" y="' + (padT + ih - h) + '" width="' + bw + '" height="' + (h + 6) + '" rx="' + Math.min(4, bw / 2) + '"/></clipPath>');
+    });
+    svg.push('</defs>');
+    // 가로 눈금선
+    for (var g = 0; g <= 4; g++) {
+      var gv = top / 4 * g, gy = y(gv);
+      if (g > 0) svg.push('<line class="gl" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + gy + '" y2="' + gy + '"/>');
+      svg.push('<text class="axis num" x="' + (padL - 8) + '" y="' + (gy + 4) + '" text-anchor="end">' + fmt(Math.round(gv)) + '</text>');
+    }
+    svg.push('<line class="base" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + (padT + ih) + '" y2="' + (padT + ih) + '"/>');
+    // x축 레이블 간격
+    var every = 1;
+    if (cols.length > 12) every = step < 14 ? 5 : step < 22 ? 2 : 1;
+    cols.forEach(function (c, i) {
+      var cx = padL + step * i + step / 2;
+      var x = padL + step * i + (step - bw) / 2;
+      svg.push('<g class="col" data-i="' + i + '">');
+      svg.push('<rect class="hit" x="' + (padL + step * i) + '" y="' + padT + '" width="' + step + '" height="' + (ih + padB) + '" rx="4"/>');
+      // 세그먼트: 아래에서 위로, 앱 순서 고정. 세그먼트 사이 2px 간격
+      var acc = 0;
+      var segs = apps.filter(function (a) { return (c.vals[a.id] || 0) > 0; });
+      segs.forEach(function (a, k) {
+        var v = c.vals[a.id];
+        var y0 = y(acc), y1 = y(acc + v);
+        var gap = k < segs.length - 1 ? Math.min(2, (y0 - y1) / 2) : 0;   // 위 조각과 2px 띄움
+        svg.push('<rect clip-path="url(#cp' + i + ')" x="' + x + '" y="' + (y1 + gap) + '" width="' + bw + '" height="' + Math.max(0.5, y0 - y1 - gap) + '" fill="' + a.color + '"/>');
+        acc += v;
+      });
+      var show = every === 1 || (every === 5 ? (i === 0 || (i + 1) % 5 === 0) : i % every === 0);
+      if (show) {
+        svg.push('<text class="axis" x="' + cx + '" y="' + (H - 8) + '" text-anchor="middle"' + (c.we ? ' style="fill:#d79a91"' : '') + '>' + c.label + '</text>');
+      }
+      svg.push('</g>');
+    });
+    // 최댓값 하나만 직접 표시
+    var mi = totals.indexOf(maxV);
+    var mx = padL + step * mi + step / 2;
+    svg.push('<text class="num" x="' + mx + '" y="' + Math.max(10, y(maxV) - 6) + '" text-anchor="middle" style="fill:#eef1fb;font-size:11px;font-weight:700">' + fmt(maxV) + '</text>');
+    svg.push('</svg>');
+    box.innerHTML = svg.join('') + '<div class="tip" id="tip"></div>';
+
+    // 막대에 마우스를 올리거나 탭하면 내용 표시
+    var tip = $('tip');
+    var cur = null;
+    function show(g, evX) {
+      var i = +g.dataset.i, c = cols[i];
+      if (cur && cur !== g) cur.classList.remove('hl');
+      cur = g; g.classList.add('hl');
+      var html = '<div class="t">' + c.tip + '</div>';
+      apps.slice().reverse().forEach(function (a) {
+        var v = c.vals[a.id] || 0;
+        html += '<div class="r"><span class="dot" style="background:' + a.color + '"></span>' + a.name + '<span class="n num">' + fmt(v) + '</span></div>';
+      });
+      html += '<div class="r sum">합계<span class="n num">' + fmt(totals[i]) + '</span></div>';
+      tip.innerHTML = html; tip.style.display = 'block';
+      var bx = box.getBoundingClientRect();
+      var scale = bx.width / W;
+      var cx = (padL + step * i + step / 2) * scale;
+      var tw = tip.offsetWidth;
+      var left = cx + 14; if (left + tw > bx.width) left = cx - tw - 14; if (left < 0) left = 0;
+      tip.style.left = left + 'px'; tip.style.top = '6px';
+    }
+    function hide() { tip.style.display = 'none'; if (cur) cur.classList.remove('hl'); cur = null; }
+    Array.prototype.forEach.call(box.querySelectorAll('.col'), function (g) {
+      g.addEventListener('mouseenter', function () { show(g); });
+      g.addEventListener('click', function (e) { e.stopPropagation(); if (cur === g) hide(); else show(g); });
+    });
+    box.querySelector('svg').addEventListener('mouseleave', hide);
+    document.addEventListener('click', hide, { once: true });
+  }
+
+  function drawTable(cols, unitLabel) {
+    var apps = visibleApps();
+    var t = todayStr();
+    var h = '<thead><tr><th>' + unitLabel + '</th>';
+    apps.forEach(function (a) { h += '<th><span class="dot" style="background:' + a.color + '"></span>' + a.name + '</th>'; });
+    h += '<th class="tot">합계</th></tr></thead><tbody>';
+    var sums = {}, all = 0;
+    cols.slice().reverse().forEach(function (c) {
+      if (c.future) return;
+      var s = 0;
+      var row = '<tr' + (c.we ? ' class="we"' : '') + '><td>' + c.tip + '</td>';
+      apps.forEach(function (a) {
+        var v = c.vals[a.id] || 0; s += v; sums[a.id] = (sums[a.id] || 0) + v;
+        row += '<td class="num' + (v ? '' : ' z') + '">' + fmt(v) + '</td>';
+      });
+      all += s;
+      h += row + '<td class="num tot' + (s ? '' : ' z') + '">' + fmt(s) + '</td></tr>';
+    });
+    h += '<tr><td><b>합계</b></td>';
+    apps.forEach(function (a) { h += '<td class="num tot">' + fmt(sums[a.id]) + '</td>'; });
+    h += '<td class="num tot">' + fmt(all) + '</td></tr></tbody>';
+    $('table').innerHTML = h;
+  }
+
+  // 앱별 합계 카드: 보이는 기간(선택한 달/해) 기준, 웹/APK 비율 포함
+  function renderApps(cols) {
+    var keys = {}; cols.forEach(function (c) { keys[c.key] = 1; });
+    var rows, keyFn;
+    if (state.view === 'day') { rows = state.days[state.month] || []; keyFn = function (r) { return r.day; }; }
+    else { rows = state.monthly; keyFn = function (r) { return r.month.slice(0, 7); }; }
+    var label = state.view === 'day' ? (+state.month.slice(5)) + '월' : state.year + '년';
+    $('appsTitle').textContent = '앱별 합계 · ' + label;
+    var el = $('apps'); el.innerHTML = '';
+    visibleApps().forEach(function (a) {
+      var web = 0, apk = 0;
+      rows.forEach(function (r) {
+        if (r.app !== a.id || !keys[keyFn(r)]) return;
+        if (r.src === 'apk') apk += val(r); else web += val(r);
+      });
+      var shown = state.src === 'web' ? web : state.src === 'apk' ? apk : web + apk;
+      var tot = web + apk;
+      var wp = tot ? Math.round(web / tot * 100) : 0;
+      var d = document.createElement('div');
+      d.className = 'app';
+      d.innerHTML =
+        '<div class="top"><span class="dot" style="background:' + a.color + '"></span>' + a.name +
+        '<a href="https://aipmp.github.io/' + a.repo + '/" target="_blank" rel="noopener">열기 ↗</a></div>' +
+        '<div class="big num">' + fmt(shown) + '<small>' + (state.metric === 'visits' ? '회' : '명') + '</small></div>' +
+        '<div class="split">' + (tot ? '<i style="width:' + wp + '%;background:' + a.color + '"></i><i style="flex:1;background:#5d6890"></i>' : '') + '</div>' +
+        '<div class="meta"><span>웹 ' + fmt(web) + (tot ? ' (' + wp + '%)' : '') + '</span><span>APK ' + fmt(apk) + '</span></div>';
+      el.appendChild(d);
+    });
+  }
+
+  function renderAll() {
+    setSeg('metricSeg', state.metric);
+    setSeg('srcSeg', state.src);
+    setSeg('viewSeg', state.view);
+    renderChips();
+    renderTiles();
+    renderMain();
+  }
+
+  function stamp() {
+    var d = kstNow();
+    $('updated').textContent = 'AIPMP 웹앱 6종 · 한국 시간 ' + String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0') + ' 기준';
+  }
+
+  function refresh() {
+    $('dash').classList.add('loading');
+    $('errBox').hidden = true;
+    return loadAll().then(function () {
+      stamp(); renderAll();
+    }).catch(function (e) {
+      showError('인터넷 연결을 확인한 뒤 다시 시도해 주세요. (' + e.message + ')');
+    }).then(function () { $('dash').classList.remove('loading'); });
+  }
+
+  // ── 이벤트 ──────────────────────────────────────────────────────
+  function segHandler(id, prop) {
+    $(id).addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      state[prop] = b.dataset.v; savePrefs(); renderAll();
+    });
+  }
+  segHandler('metricSeg', 'metric');
+  segHandler('srcSeg', 'src');
+  segHandler('viewSeg', 'view');
+
+  function move(n) {
+    if (state.view === 'day') {
+      state.month = addMonths(state.month, n);
+      $('dash').classList.add('loading');
+      loadMonth(state.month).then(renderAll).catch(function (e) { alert('불러오지 못했습니다: ' + e.message); })
+        .then(function () { $('dash').classList.remove('loading'); });
+    } else { state.year += n; renderAll(); }
+  }
+  $('prev').onclick = function () { move(-1); };
+  $('next').onclick = function () { move(1); };
+  $('reload').onclick = refresh;
+  $('retry').onclick = refresh;
+
+  // 바로가기: 상단 바 아래 전체 화면에 앱 목록을 펼치고, 누르면 그 웹앱을 새 탭으로 연다
+  (function () {
+    var btn = $('goBtn'), page = $('goPage'), hdr = document.querySelector('header');
+    var curCat = CATS[0].id;
+    try { var sc = localStorage.getItem('vs_gocat'); if (CATS.some(function (c) { return c.id === sc; })) curCat = sc; } catch (e) {}
+    function drawGo() {
+      $('goTabs').innerHTML = CATS.map(function (c) {
+        var n = APPS.filter(function (a) { return a.cat === c.id; }).length;
+        return '<button class="gtab' + (c.id === curCat ? ' on' : '') + '" role="tab" aria-selected="' + (c.id === curCat) + '" data-cat="' + c.id + '">' +
+               '<span aria-hidden="true">' + c.icon + '</span>' + c.name + '<span class="cnt">' + n + '</span></button>';
+      }).join('');
+      $('goList').innerHTML = APPS.filter(function (a) { return a.cat === curCat; }).map(function (a) {
+        var url = 'https://aipmp.github.io/' + a.repo + '/';
+        return '<a class="gcard" style="--c:' + a.color + '" href="' + url + '" target="_blank" rel="noopener">' +
+               '<span class="gico" aria-hidden="true"><img src="icons/' + a.id + '.png" alt="" loading="lazy"></span>' +
+               '<span class="gtx"><b>' + a.name + '</b><span>' + a.desc + '</span><small>' + url.replace('https://', '') + '</small></span>' +
+               '<span class="garr" aria-hidden="true">↗</span></a>';
+      }).join('') || '<div class="empty">아직 앱이 없습니다.</div>';
+    }
+    drawGo();
+    $('goTabs').addEventListener('click', function (e) {
+      var b = e.target.closest('.gtab'); if (!b) return;
+      curCat = b.getAttribute('data-cat');
+      try { localStorage.setItem('vs_gocat', curCat); } catch (e2) {}
+      drawGo();
+    });
+    function fit() { document.documentElement.style.setProperty('--hh', hdr.offsetHeight + 'px'); }
+    function setOpen(open) {
+      if (open) fit();
+      page.hidden = !open;
+      document.body.classList.toggle('gp-open', open);
+      btn.classList.toggle('on', open);
+      btn.textContent = open ? '닫기 ✕' : '바로가기';
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    btn.addEventListener('click', function () { setOpen(page.hidden); });
+    page.addEventListener('click', function (e) { if (e.target.closest('a')) setOpen(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !page.hidden) setOpen(false); });
+    window.addEventListener('resize', function () { if (!page.hidden) fit(); });
+  })();
+  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(renderMain, 120); });
+
+  // ── 시작 ────────────────────────────────────────────────────────
+  loadPrefs();
+  state.month = monthOf(todayStr());
+  state.year = +todayStr().slice(0, 4);
+  renderAll();   // 빈 화면 먼저 그리고
+  refresh();     // 서버에서 받아 다시 그림
+})();
+</script>
+</body>
+</html>
